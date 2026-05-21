@@ -34,6 +34,9 @@ export default function Home() {
   const configFileRef = useRef<HTMLInputElement>(null);
   const [styleDescription, setStyleDescription] = useState('');
   const [refImagePreview, setRefImagePreview] = useState('');
+  const [slideCount, setSlideCount] = useState<number | null>(null);
+  const [contentMode, setContentMode] = useState<'compact' | 'preserve'>('compact');
+  const [structurePattern, setStructurePattern] = useState('');
 
   async function handleReferenceUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -44,8 +47,9 @@ export default function Home() {
     fd.append('file', file);
     const res = await fetch('/api/extract-style', { method: 'POST', body: fd });
     if (res.ok) {
-      const style = await res.json();
+      const { structurePattern: sp, ...style } = await res.json();
       setBrand(style);
+      if (sp) setStructurePattern(sp);
     }
     setLoading(false);
     setLoadingMsg('');
@@ -79,7 +83,7 @@ export default function Home() {
     const res = await fetch('/api/structure', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: rawText }),
+      body: JSON.stringify({ text: rawText, slideCount, contentMode, structurePattern }),
     });
     if (res.ok) {
       const structured = await res.json();
@@ -261,11 +265,16 @@ export default function Home() {
               {/* PPTX 업로드 */}
               <div
                 onClick={() => refFileRef.current?.click()}
-                style={{ border: `2px dashed ${brand.accentColor}`, borderRadius: 8, padding: '24px 16px', textAlign: 'center', cursor: 'pointer', color: '#888', fontSize: 13 }}
+                style={{ border: `2px dashed ${brand.accentColor}`, borderRadius: 8, padding: '24px 16px', textAlign: 'center', cursor: 'pointer', color: '#888', fontSize: 13, position: 'relative' }}
               >
                 <div style={{ fontSize: 26, marginBottom: 6 }}>📂</div>
                 <div style={{ fontWeight: 600, color: '#444', marginBottom: 4 }}>PPT 파일</div>
-                <div style={{ fontSize: 11, color: '#aaa' }}>폰트 · 색상 · 로고 위치 추출</div>
+                <div style={{ fontSize: 11, color: '#aaa' }}>폰트 · 색상 · 로고 · 구조 추출</div>
+                {structurePattern && (
+                  <div style={{ marginTop: 8, fontSize: 11, color: brand.accentColor, fontWeight: 600, background: `${brand.accentColor}18`, borderRadius: 4, padding: '3px 6px', display: 'inline-block' }}>
+                    ✓ 구조 분석 완료
+                  </div>
+                )}
               </div>
               <input ref={refFileRef} type="file" accept=".pptx" style={{ display: 'none' }} onChange={handleReferenceUpload} />
 
@@ -280,6 +289,17 @@ export default function Home() {
               </div>
               <input ref={imgRefFileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleImageRefUpload} />
             </div>
+
+            {/* PPT 구조 분석 결과 */}
+            {structurePattern && (
+              <div style={{ marginTop: 12, padding: '10px 14px', background: `${brand.accentColor}10`, borderRadius: 8, border: `1px solid ${brand.accentColor}30`, display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                <span style={{ fontSize: 14, flexShrink: 0 }}>📊</span>
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: brand.accentColor, marginBottom: 2 }}>레퍼런스 구조 분석</div>
+                  <div style={{ fontSize: 12, color: '#555', lineHeight: 1.5 }}>{structurePattern}</div>
+                </div>
+              </div>
+            )}
 
             {/* 이미지 업로드 후 결과 표시 */}
             {refImagePreview && (
@@ -399,6 +419,70 @@ export default function Home() {
               style={{ width: '100%', padding: '12px', borderRadius: 8, border: '1.5px solid #ddd', fontSize: 14, lineHeight: 1.6, resize: 'vertical', outline: 'none', boxSizing: 'border-box' }}
               placeholder={`보고서 내용을 여기에 붙여넣으세요.\n\n예시:\n2024년 4분기 영업 실적 보고\n\n매출 현황\n- 총 매출: 120억원 (전년 대비 +15%)\n- 주요 제품별 매출: A제품 50억, B제품 40억, C제품 30억\n\n주요 성과\n이번 분기에는 신규 거래처 12개사를 확보하였으며...\n\n향후 계획\n1분기에는 신제품 출시 및 마케팅 확대를 통해...`}
             />
+
+            {/* 슬라이드 수 설정 */}
+            <div style={{ marginTop: 20, paddingTop: 20, borderTop: '1px solid #eee' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 13, color: '#555', fontWeight: 600, whiteSpace: 'nowrap' }}>슬라이드 수</span>
+                  <div style={{ display: 'flex', gap: 4 }}>
+                    {([1, 2, 3, 5, 10] as const).map(n => (
+                      <button
+                        key={n}
+                        onClick={() => setSlideCount(slideCount === n ? null : n)}
+                        style={{
+                          padding: '4px 11px', borderRadius: 6, border: `1.5px solid ${slideCount === n ? brand.primaryColor : '#ddd'}`,
+                          background: slideCount === n ? brand.primaryColor : '#fff',
+                          color: slideCount === n ? '#fff' : '#555',
+                          fontSize: 13, fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s',
+                        }}
+                      >
+                        {n}
+                      </button>
+                    ))}
+                    <button
+                      onClick={() => setSlideCount(null)}
+                      style={{
+                        padding: '4px 11px', borderRadius: 6, border: `1.5px solid ${slideCount === null ? brand.primaryColor : '#ddd'}`,
+                        background: slideCount === null ? brand.primaryColor : '#fff',
+                        color: slideCount === null ? '#fff' : '#555',
+                        fontSize: 13, fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s',
+                      }}
+                    >
+                      AI 자율
+                    </button>
+                  </div>
+                </div>
+
+                {slideCount !== null && (
+                  <div style={{ display: 'flex', gap: 0, borderRadius: 6, overflow: 'hidden', border: `1.5px solid ${brand.primaryColor}` }}>
+                    {(['compact', 'preserve'] as const).map((mode, i) => (
+                      <button
+                        key={mode}
+                        onClick={() => setContentMode(mode)}
+                        style={{
+                          padding: '4px 14px', border: 'none',
+                          background: contentMode === mode ? brand.primaryColor : '#fff',
+                          color: contentMode === mode ? '#fff' : brand.primaryColor,
+                          fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                          borderLeft: i > 0 ? `1px solid ${brand.primaryColor}` : 'none',
+                          transition: 'all 0.15s',
+                        }}
+                      >
+                        {mode === 'compact' ? '요약 압축' : '전체 유지'}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              {slideCount !== null && (
+                <p style={{ fontSize: 12, color: '#888', marginTop: 8, marginBottom: 0 }}>
+                  {contentMode === 'compact'
+                    ? `표지 제외 콘텐츠 슬라이드 ${slideCount}장으로 요약합니다.`
+                    : `표지 제외 콘텐츠 슬라이드 ${slideCount}장을 목표로 내용을 빠뜨리지 않고 담습니다.`}
+                </p>
+              )}
+            </div>
           </div>
 
           <div style={{ display: 'flex', gap: 12 }}>

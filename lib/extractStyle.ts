@@ -120,3 +120,46 @@ export async function extractStyleFromPptx(buffer: ArrayBuffer): Promise<BrandSt
     return DEFAULT_STYLE;
   }
 }
+
+export interface SlideStructureItem {
+  index: number;
+  textBlocks: number;
+  hasTable: boolean;
+  hasImage: boolean;
+  hasChart: boolean;
+  totalTextLength: number;
+}
+
+export async function extractSlideStructures(buffer: ArrayBuffer): Promise<SlideStructureItem[]> {
+  try {
+    const zip = await JSZip.loadAsync(buffer);
+    const structures: SlideStructureItem[] = [];
+
+    const slideFiles = Object.keys(zip.files)
+      .filter(name => /^ppt\/slides\/slide\d+\.xml$/.test(name))
+      .sort((a, b) => {
+        const numA = parseInt(a.match(/slide(\d+)\.xml/)?.[1] ?? '0');
+        const numB = parseInt(b.match(/slide(\d+)\.xml/)?.[1] ?? '0');
+        return numA - numB;
+      });
+
+    for (let i = 0; i < slideFiles.length; i++) {
+      const file = zip.file(slideFiles[i]);
+      if (!file) continue;
+      const xml = await file.async('text');
+
+      const textBlocks = (xml.match(/<p:sp[>\s]/g) ?? []).length;
+      const hasTable = xml.includes('<a:tbl>') || xml.includes('<a:tbl ');
+      const hasImage = xml.includes('<p:pic>') || xml.includes('<p:pic ');
+      const hasChart = xml.includes('<c:chart') || xml.includes('chart+xml');
+      const textContent = [...xml.matchAll(/<a:t>([^<]*)<\/a:t>/g)].map(m => m[1]).join('');
+      const totalTextLength = textContent.replace(/\s/g, '').length;
+
+      structures.push({ index: i + 1, textBlocks, hasTable, hasImage, hasChart, totalTextLength });
+    }
+
+    return structures;
+  } catch {
+    return [];
+  }
+}

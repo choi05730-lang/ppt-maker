@@ -89,7 +89,7 @@ function renderBullets(s: pptxgen.Slide, slide: SlideContent, brand: BrandStyle)
     ...titleOpts(brand),
   });
   // Divider line
-  s.addShape(pptxgen.ShapeType.line, {
+  s.addShape('line' as pptxgen.ShapeType, {
     x: 0.5, y: 1.25, w: brand.slideWidth - 1, h: 0,
     line: { color: brand.accentColor.replace('#', ''), width: 2 },
   });
@@ -109,7 +109,7 @@ function renderImage(s: pptxgen.Slide, slide: SlideContent, brand: BrandStyle) {
     x: 0.5, y: 0.3, w: brand.slideWidth - 1, h: 0.9,
     ...titleOpts(brand),
   });
-  s.addShape(pptxgen.ShapeType.line, {
+  s.addShape('line' as pptxgen.ShapeType, {
     x: 0.5, y: 1.25, w: brand.slideWidth - 1, h: 0,
     line: { color: brand.accentColor.replace('#', ''), width: 2 },
   });
@@ -134,7 +134,7 @@ function renderSplit(s: pptxgen.Slide, slide: SlideContent, brand: BrandStyle) {
     x: 0.5, y: 0.3, w: brand.slideWidth - 1, h: 0.9,
     ...titleOpts(brand),
   });
-  s.addShape(pptxgen.ShapeType.line, {
+  s.addShape('line' as pptxgen.ShapeType, {
     x: 0.5, y: 1.25, w: brand.slideWidth - 1, h: 0,
     line: { color: brand.accentColor.replace('#', ''), width: 2 },
   });
@@ -166,7 +166,7 @@ function renderTable(s: pptxgen.Slide, slide: SlideContent, brand: BrandStyle) {
     x: 0.5, y: 0.3, w: brand.slideWidth - 1, h: 0.9,
     ...titleOpts(brand),
   });
-  s.addShape(pptxgen.ShapeType.line, {
+  s.addShape('line' as pptxgen.ShapeType, {
     x: 0.5, y: 1.25, w: brand.slideWidth - 1, h: 0,
     line: { color: brand.accentColor.replace('#', ''), width: 2 },
   });
