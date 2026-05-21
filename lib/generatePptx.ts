@@ -1,5 +1,5 @@
 import pptxgen from 'pptxgenjs';
-import { BrandStyle, SlideContent } from '@/types';
+import { BrandStyle, ColumnBlock, SlideContent } from '@/types';
 
 export async function generatePptx(slides: SlideContent[], brand: BrandStyle): Promise<Blob> {
   const prs = new pptxgen();
@@ -41,6 +41,9 @@ export async function generatePptx(slides: SlideContent[], brand: BrandStyle): P
         break;
       case 'chart':
         renderChart(s, slide, brand, prs);
+        break;
+      case 'columns':
+        renderColumns(s, slide, brand);
         break;
     }
   }
@@ -190,6 +193,66 @@ function renderTable(s: pptxgen.Slide, slide: SlideContent, brand: BrandStyle) {
     w: brand.slideWidth - 1,
     h: brand.slideHeight - 2.2,
     border: { type: 'solid', color: 'CCCCCC', pt: 1 },
+  });
+}
+
+function renderColumns(s: pptxgen.Slide, slide: SlideContent, brand: BrandStyle) {
+  s.addText(slide.title, {
+    x: 0.5, y: 0.3, w: brand.slideWidth - 1, h: 0.9,
+    ...titleOpts(brand),
+  });
+  s.addShape('line' as pptxgen.ShapeType, {
+    x: 0.5, y: 1.25, w: brand.slideWidth - 1, h: 0,
+    line: { color: brand.accentColor.replace('#', ''), width: 2 },
+  });
+
+  const blocks = slide.columnBlocks ?? [];
+  const numCols = slide.columnCount ?? 3;
+  const colW = (brand.slideWidth - 1) / numCols;
+  const startY = 1.45;
+  const totalH = brand.slideHeight - startY - 0.3;
+
+  // Distribute blocks round-robin into columns
+  const cols: ColumnBlock[][] = Array.from({ length: numCols }, () => []);
+  blocks.forEach((b, i) => cols[i % numCols].push(b));
+
+  cols.forEach((col, ci) => {
+    const x = 0.5 + ci * colW;
+    const colContentW = colW - (ci < numCols - 1 ? 0.15 : 0);
+
+    // Vertical divider between columns
+    if (ci > 0) {
+      s.addShape('line' as pptxgen.ShapeType, {
+        x: x - 0.075, y: startY, w: 0, h: totalH,
+        line: { color: 'E0E0E0', width: 0.5 },
+      });
+    }
+
+    let currentY = startY;
+    const rowH = totalH / Math.max(col.length, 1);
+
+    col.forEach((block) => {
+      s.addText(block.header, {
+        x, y: currentY, w: colContentW, h: 0.28,
+        fontFace: brand.titleFont, fontSize: brand.bodySize - 2,
+        bold: true, color: brand.primaryColor.replace('#', ''),
+      });
+
+      if (block.items.length > 0) {
+        const itemText = block.items.map(item => ({
+          text: item,
+          options: { bullet: true },
+        }));
+        const itemH = Math.min(block.items.length * 0.22, rowH - 0.32);
+        s.addText(itemText, {
+          x, y: currentY + 0.3, w: colContentW, h: Math.max(itemH, 0.22),
+          fontFace: brand.bodyFont, fontSize: brand.bodySize - 4,
+          color: '404040', valign: 'top',
+        });
+      }
+
+      currentY += rowH;
+    });
   });
 }
 

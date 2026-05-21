@@ -28,6 +28,7 @@ Available layouts:
 - "split": Left text + right image/text (for comparisons, before/after)
 - "table": Title + table data (for data, comparisons with rows/cols)
 - "chart": Title + chart (for numeric trends, comparisons, distributions, time series)
+- "columns": Multi-column info blocks (2-3 columns of grouped sections; use when content has 3+ distinct categories/groups shown side by side, like supplier info, capability overview, numbered sections)
 
 Return a JSON array of slides. Each slide:
 {
@@ -45,17 +46,23 @@ Return a JSON array of slides. Each slide:
     "datasets": [
       { "name": "시리즈명", "values": [10, 20, 30] }
     ]
-  }
+  },
+  "columnCount": 3,                        // for columns layout: 2 or 3
+  "columnBlocks": [                        // for columns layout — REQUIRED
+    { "header": "1) Section Title", "items": ["item 1", "item 2", "item 3"] },
+    { "header": "2) Another Section", "items": ["item 1"] }
+  ]
 }
 
 Rules:
 - First slide should usually be "title" layout
 - Keep titles concise (under 10 words)
 - Bullets: max 6 per slide, each under 15 words
+- Use "columns" layout (columnCount: 3) when content has multiple distinct info groups/categories (e.g. company profile with 6-9 sections, feature comparison, numbered sections displayed side by side). PREFER "columns" over "table" when the reference uses multi-column section layouts.
 - Use "chart" layout when content has numeric data suitable for visualization (trends, distributions, comparisons of 3+ values)
 - Use "bar" for category comparisons, "line" for trends over time, "pie"/"doughnut" for proportions (max 6 slices)
 - If content is very long, split into multiple slides
-- Return ONLY the JSON array, no other text${slideCountInstruction}${structurePattern ? `\n\nREFERENCE STRUCTURE PATTERN (from uploaded PPT): ${structurePattern}\nApply this structural pattern when organizing the content: mirror its layout sequencing, information density per slide, and preference for tables/charts/bullets. If the reference prefers tables, use table layout for data. If it uses split layouts, use split for comparisons. PAGE COUNT constraint overrides this pattern if specified.` : ''}`;
+- Return ONLY the JSON array, no other text${slideCountInstruction}${structurePattern ? `\n\nREFERENCE STRUCTURE PATTERN: ${structurePattern}\nCRITICAL — strictly apply this structural pattern:\n- If the reference uses multi-column layouts (2-column, 3-column), use "columns" layout with matching columnCount\n- If the reference uses numbered sections in a grid, use "columns" layout with columnBlocks matching that section structure\n- Mirror the information density per slide (dense = more columnBlocks per slide, sparse = fewer bullets per slide)\n- Match the preference for tables/charts/bullets exactly as described\n- PAGE COUNT constraint overrides this pattern if specified.` : ''}`;
 
   const response = await client.messages.create({
     model: 'claude-sonnet-4-6',

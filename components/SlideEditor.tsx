@@ -1,5 +1,5 @@
 'use client';
-import { BrandStyle, ChartData, ChartType, LayoutType, SlideContent } from '@/types';
+import { BrandStyle, ChartData, ChartType, ColumnBlock, LayoutType, SlideContent } from '@/types';
 import { useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 
@@ -22,6 +22,7 @@ const LAYOUT_LABELS: Record<LayoutType, string> = {
   split: '좌우분할',
   table: '표',
   chart: '차트',
+  columns: '다중 컬럼',
 };
 
 const CHART_TYPE_LABELS: Record<ChartType, string> = {
@@ -256,6 +257,55 @@ export default function SlideEditor({ slide, brand, onChange, onDelete, onDuplic
           <button onClick={() => setShowChartBuilder(true)}
             style={{ padding: '7px', borderRadius: 7, border: `1.5px dashed #5BA85F`, background: '#f6fff7', color: '#5BA85F', fontSize: 13, cursor: 'pointer', fontWeight: 600 }}>
             📊 엑셀에서 가져오기
+          </button>
+        </div>
+      )}
+
+      {/* Columns layout editor */}
+      {slide.layout === 'columns' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {/* Column count */}
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <span style={{ fontSize: 12, color: '#888', flexShrink: 0 }}>컬럼 수</span>
+            {([2, 3] as const).map(n => (
+              <button key={n} onClick={() => update({ columnCount: n })}
+                style={{ padding: '3px 14px', borderRadius: 12, fontSize: 12, cursor: 'pointer',
+                  border: `2px solid ${(slide.columnCount ?? 3) === n ? brand.accentColor : '#ddd'}`,
+                  background: (slide.columnCount ?? 3) === n ? brand.accentColor : '#fff',
+                  color: (slide.columnCount ?? 3) === n ? '#fff' : '#555',
+                  fontWeight: (slide.columnCount ?? 3) === n ? 600 : 400 }}>
+                {n}열
+              </button>
+            ))}
+          </div>
+
+          {/* Blocks */}
+          {(slide.columnBlocks ?? []).map((block, bi) => (
+            <div key={bi} style={{ border: '1.5px solid #eee', borderRadius: 8, padding: '10px 12px', background: '#fafafa', display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                <span style={{ fontSize: 11, color: '#aaa', flexShrink: 0 }}>#{bi + 1}</span>
+                <input value={block.header} onChange={e => {
+                  const blocks = [...(slide.columnBlocks ?? [])];
+                  blocks[bi] = { ...blocks[bi], header: e.target.value };
+                  update({ columnBlocks: blocks });
+                }} style={{ flex: 1, padding: '4px 8px', borderRadius: 6, border: '1.5px solid #ddd', fontSize: 12 }} placeholder="섹션 제목 (예: 1) Business career)" />
+                <button onClick={() => {
+                  const blocks = (slide.columnBlocks ?? []).filter((_, i) => i !== bi);
+                  update({ columnBlocks: blocks });
+                }} style={{ padding: '3px 8px', borderRadius: 4, border: '1px solid #ffcccc', background: '#fff5f5', color: '#c00', fontSize: 11, cursor: 'pointer', flexShrink: 0 }}>✕</button>
+              </div>
+              <textarea value={(block.items ?? []).join('\n')} onChange={e => {
+                const blocks = [...(slide.columnBlocks ?? [])];
+                blocks[bi] = { ...blocks[bi], items: e.target.value.split('\n').filter(l => l.trim()) };
+                update({ columnBlocks: blocks });
+              }} rows={3} style={{ padding: '5px 8px', borderRadius: 6, border: '1.5px solid #ddd', fontSize: 12, resize: 'vertical' }} placeholder="항목 1&#10;항목 2&#10;항목 3" />
+            </div>
+          ))}
+          <button onClick={() => {
+            const blocks = [...(slide.columnBlocks ?? []), { header: `섹션 ${(slide.columnBlocks?.length ?? 0) + 1}`, items: [] }];
+            update({ columnBlocks: blocks });
+          }} style={{ padding: '6px', borderRadius: 8, border: `1.5px dashed ${brand.accentColor}`, background: 'transparent', color: brand.accentColor, fontSize: 12, cursor: 'pointer' }}>
+            + 섹션 추가
           </button>
         </div>
       )}

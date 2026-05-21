@@ -1,5 +1,5 @@
 'use client';
-import { BrandStyle, ChartData, SlideContent } from '@/types';
+import { BrandStyle, ChartData, ColumnBlock, SlideContent } from '@/types';
 
 function MiniChart({ chart, brand, w, h }: { chart: ChartData; brand: BrandStyle; w: number; h: number }) {
   const colors = [brand.primaryColor, brand.accentColor, '#E8A838', '#5BA85F', '#C0504D', '#9B59B6'];
@@ -247,6 +247,39 @@ export default function SlidePreview({ slide, brand, scale = 1, selected, onClic
           </div>
         </div>
       )}
+
+      {slide.layout === 'columns' && (() => {
+        const blocks = slide.columnBlocks ?? [];
+        const numCols = slide.columnCount ?? 3;
+        const cols: ColumnBlock[][] = Array.from({ length: numCols }, () => []);
+        blocks.forEach((b, i) => cols[i % numCols].push(b));
+        return (
+          <div style={{ padding: `${10 * scale}px ${16 * scale}px`, height: '100%', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ fontSize: fs(brand.titleSize), fontWeight: brand.titleBold ? 'bold' : 'normal', color: brand.primaryColor }}>
+              {slide.title}
+            </div>
+            <div style={{ height: 2, backgroundColor: brand.accentColor, margin: `${4 * scale}px 0` }} />
+            <div style={{ flex: 1, display: 'flex', gap: 8 * scale, overflow: 'hidden' }}>
+              {cols.map((col, ci) => (
+                <div key={ci} style={{ flex: 1, borderLeft: ci > 0 ? `1px solid #e8e8e8` : 'none', paddingLeft: ci > 0 ? 8 * scale : 0, overflow: 'hidden' }}>
+                  {col.map((block, bi) => (
+                    <div key={bi} style={{ marginBottom: 5 * scale }}>
+                      <div style={{ fontSize: fs(brand.bodySize - 1), fontWeight: 700, color: brand.primaryColor, lineHeight: 1.2, marginBottom: 1 * scale }}>
+                        {block.header}
+                      </div>
+                      {block.items.map((item, ii) => (
+                        <div key={ii} style={{ fontSize: fs(brand.bodySize - 3), color: '#555', paddingLeft: 6 * scale, lineHeight: 1.3 }}>
+                          · {item}
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
 
       {slide.layout === 'table' && (
         <div style={{ padding: `${10 * scale}px ${16 * scale}px`, height: '100%', display: 'flex', flexDirection: 'column' }}>

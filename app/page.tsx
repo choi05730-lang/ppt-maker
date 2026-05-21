@@ -68,9 +68,10 @@ export default function Home() {
     const res = await fetch('/api/extract-style-from-image', { method: 'POST', body: fd });
     if (res.ok) {
       const result = await res.json();
-      const { styleDescription: desc, ...style } = result;
+      const { styleDescription: desc, structurePattern: sp, ...style } = result;
       setBrand(prev => ({ ...prev, ...style }));
       if (desc) setStyleDescription(desc);
+      if (sp) setStructurePattern(sp);
     }
     setLoading(false);
     setLoadingMsg('');
