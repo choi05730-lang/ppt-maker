@@ -1,4 +1,18 @@
-export type LayoutType = 'title' | 'bullets' | 'image' | 'split' | 'table';
+export type LayoutType = 'title' | 'bullets' | 'image' | 'split' | 'table' | 'chart';
+
+export type ChartType = 'bar' | 'line' | 'pie' | 'doughnut';
+
+export interface ChartDataset {
+  name: string;
+  values: number[];
+}
+
+export interface ChartData {
+  type: ChartType;
+  title?: string;
+  labels: string[];
+  datasets: ChartDataset[];
+}
 
 export interface SlideContent {
   id: string;
@@ -10,6 +24,7 @@ export interface SlideContent {
   imageCaption?: string;
   rightContent?: string; // for split layout
   tableData?: string[][];
+  chartData?: ChartData; // for chart layout
 }
 
 export interface BrandStyle {

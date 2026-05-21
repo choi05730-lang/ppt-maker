@@ -27,6 +27,7 @@ Available layouts:
 - "image": Title + image placeholder + caption (when image is described)
 - "split": Left text + right image/text (for comparisons, before/after)
 - "table": Title + table data (for data, comparisons with rows/cols)
+- "chart": Title + chart (for numeric trends, comparisons, distributions, time series)
 
 Return a JSON array of slides. Each slide:
 {
@@ -36,13 +37,23 @@ Return a JSON array of slides. Each slide:
   "body": "...",                           // for title/image layout
   "imageCaption": "...",                   // for image layout
   "rightContent": "...",                   // for split layout (right side text)
-  "tableData": [["Col1","Col2"],["R1C1","R1C2"]]  // for table layout
+  "tableData": [["Col1","Col2"],["R1C1","R1C2"]],  // for table layout
+  "chartData": {                           // for chart layout — REQUIRED when layout is "chart"
+    "type": "bar",                         // bar | line | pie | doughnut
+    "title": "차트 제목",
+    "labels": ["라벨1","라벨2","라벨3"],
+    "datasets": [
+      { "name": "시리즈명", "values": [10, 20, 30] }
+    ]
+  }
 }
 
 Rules:
 - First slide should usually be "title" layout
 - Keep titles concise (under 10 words)
 - Bullets: max 6 per slide, each under 15 words
+- Use "chart" layout when content has numeric data suitable for visualization (trends, distributions, comparisons of 3+ values)
+- Use "bar" for category comparisons, "line" for trends over time, "pie"/"doughnut" for proportions (max 6 slices)
 - If content is very long, split into multiple slides
 - Return ONLY the JSON array, no other text${slideCountInstruction}${structurePattern ? `\n\nREFERENCE STRUCTURE PATTERN (from uploaded PPT): ${structurePattern}\nApply this structural pattern when organizing the content: mirror its layout sequencing, information density per slide, and preference for tables/charts/bullets. If the reference prefers tables, use table layout for data. If it uses split layouts, use split for comparisons. PAGE COUNT constraint overrides this pattern if specified.` : ''}`;
 

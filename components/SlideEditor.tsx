@@ -1,5 +1,5 @@
 'use client';
-import { BrandStyle, LayoutType, SlideContent } from '@/types';
+import { BrandStyle, ChartData, ChartType, LayoutType, SlideContent } from '@/types';
 import { useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 
@@ -21,6 +21,14 @@ const LAYOUT_LABELS: Record<LayoutType, string> = {
   image: '제목+이미지',
   split: '좌우분할',
   table: '표',
+  chart: '차트',
+};
+
+const CHART_TYPE_LABELS: Record<ChartType, string> = {
+  bar: '막대',
+  line: '라인',
+  pie: '파이',
+  doughnut: '도넛',
 };
 
 export default function SlideEditor({ slide, brand, onChange, onDelete, onDuplicate }: Props) {
@@ -179,12 +187,77 @@ export default function SlideEditor({ slide, brand, onChange, onDelete, onDuplic
       {showChartBuilder && (
         <ChartBuilder
           brand={brand}
-          onInsert={(dataUrl, title) => {
-            update({ imageUrl: dataUrl, layout: slide.layout === 'title' || slide.layout === 'bullets' ? 'image' : slide.layout, imageCaption: title });
+          onInsert={(dataUrl, title, chartData) => {
+            if (slide.layout === 'chart') {
+              update({ chartData, imageUrl: dataUrl });
+            } else {
+              update({ imageUrl: dataUrl, layout: slide.layout === 'title' || slide.layout === 'bullets' ? 'image' : slide.layout, imageCaption: title });
+            }
             setShowChartBuilder(false);
           }}
           onClose={() => setShowChartBuilder(false)}
         />
+      )}
+
+      {/* Chart editor */}
+      {slide.layout === 'chart' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {/* Chart type selector */}
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+            <span style={{ fontSize: 12, color: '#888', flexShrink: 0 }}>차트 타입</span>
+            {(Object.keys(CHART_TYPE_LABELS) as ChartType[]).map(t => (
+              <button key={t} onClick={() => update({ chartData: { ...(slide.chartData ?? { labels: [], datasets: [] }), type: t } })}
+                style={{ padding: '3px 10px', borderRadius: 12, fontSize: 12, cursor: 'pointer',
+                  border: `2px solid ${slide.chartData?.type === t ? brand.accentColor : '#ddd'}`,
+                  background: slide.chartData?.type === t ? brand.accentColor : '#fff',
+                  color: slide.chartData?.type === t ? '#fff' : '#555',
+                  fontWeight: slide.chartData?.type === t ? 600 : 400 }}>
+                {CHART_TYPE_LABELS[t]}
+              </button>
+            ))}
+          </div>
+
+          {/* Labels */}
+          <label style={{ fontSize: 12, color: '#888', display: 'flex', flexDirection: 'column', gap: 4 }}>
+            라벨 (쉼표 구분)
+            <input value={(slide.chartData?.labels ?? []).join(', ')}
+              onChange={e => update({ chartData: { ...(slide.chartData ?? { type: 'bar', datasets: [] }), labels: e.target.value.split(',').map(s => s.trim()).filter(Boolean) } })}
+              style={{ padding: '6px 10px', borderRadius: 6, border: '1.5px solid #ddd', fontSize: 13 }}
+              placeholder="1월, 2월, 3월" />
+          </label>
+
+          {/* Datasets */}
+          {(slide.chartData?.datasets ?? []).map((ds, di) => (
+            <div key={di} style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+              <input value={ds.name} onChange={e => {
+                const datasets = [...(slide.chartData?.datasets ?? [])];
+                datasets[di] = { ...datasets[di], name: e.target.value };
+                update({ chartData: { ...(slide.chartData ?? { type: 'bar', labels: [] }), datasets } });
+              }} style={{ width: 80, padding: '5px 8px', borderRadius: 6, border: '1.5px solid #ddd', fontSize: 12 }} placeholder="시리즈명" />
+              <input value={ds.values.join(', ')} onChange={e => {
+                const datasets = [...(slide.chartData?.datasets ?? [])];
+                datasets[di] = { ...datasets[di], values: e.target.value.split(',').map(s => parseFloat(s.trim())).filter(v => !isNaN(v)) };
+                update({ chartData: { ...(slide.chartData ?? { type: 'bar', labels: [] }), datasets } });
+              }} style={{ flex: 1, padding: '5px 8px', borderRadius: 6, border: '1.5px solid #ddd', fontSize: 12 }} placeholder="10, 20, 30" />
+              <button onClick={() => {
+                const datasets = (slide.chartData?.datasets ?? []).filter((_, i) => i !== di);
+                update({ chartData: { ...(slide.chartData ?? { type: 'bar', labels: [] }), datasets } });
+              }} style={{ padding: '4px 8px', borderRadius: 4, border: '1px solid #ffcccc', background: '#fff5f5', color: '#c00', fontSize: 11, cursor: 'pointer' }}>✕</button>
+            </div>
+          ))}
+          <button onClick={() => {
+            const datasets = [...(slide.chartData?.datasets ?? []), { name: `시리즈 ${(slide.chartData?.datasets?.length ?? 0) + 1}`, values: [] }];
+            update({ chartData: { type: slide.chartData?.type ?? 'bar', labels: slide.chartData?.labels ?? [], datasets } });
+          }} style={{ padding: '5px 10px', borderRadius: 6, border: `1.5px dashed ${brand.accentColor}`, background: 'transparent', color: brand.accentColor, fontSize: 12, cursor: 'pointer' }}>
+            + 시리즈 추가
+          </button>
+
+          {/* Excel import via ChartBuilder */}
+          <button onClick={() => setShowChartBuilder(true)}
+            style={{ padding: '7px', borderRadius: 7, border: `1.5px dashed #5BA85F`, background: '#f6fff7', color: '#5BA85F', fontSize: 13, cursor: 'pointer', fontWeight: 600 }}>
+            📊 엑셀에서 가져오기
+          </button>
+        </div>
       )}
 
       {/* Table editor */}

@@ -121,13 +121,43 @@ export async function extractStyleFromPptx(buffer: ArrayBuffer): Promise<BrandSt
   }
 }
 
+export interface SlideChartInfo {
+  type: string; // bar, pie, line, doughnut, area, scatter, radar, etc.
+  isPivot: boolean;
+}
+
 export interface SlideStructureItem {
   index: number;
   textBlocks: number;
   hasTable: boolean;
   hasImage: boolean;
-  hasChart: boolean;
+  charts: SlideChartInfo[];
   totalTextLength: number;
+}
+
+const CHART_TYPE_TAGS: Record<string, string> = {
+  '<c:barChart': 'bar',
+  '<c:lineChart': 'line',
+  '<c:pieChart': 'pie',
+  '<c:doughnutChart': 'doughnut',
+  '<c:areaChart': 'area',
+  '<c:scatterChart': 'scatter',
+  '<c:radarChart': 'radar',
+  '<c:bubbleChart': 'bubble',
+};
+
+async function parseChartFile(zip: JSZip, chartPath: string): Promise<SlideChartInfo | null> {
+  const file = zip.file(chartPath);
+  if (!file) return null;
+  const xml = await file.async('text');
+
+  let type = 'unknown';
+  for (const [tag, name] of Object.entries(CHART_TYPE_TAGS)) {
+    if (xml.includes(tag)) { type = name; break; }
+  }
+
+  const isPivot = xml.includes('<c:pivotSource');
+  return { type, isPivot };
 }
 
 export async function extractSlideStructures(buffer: ArrayBuffer): Promise<SlideStructureItem[]> {
@@ -151,11 +181,29 @@ export async function extractSlideStructures(buffer: ArrayBuffer): Promise<Slide
       const textBlocks = (xml.match(/<p:sp[>\s]/g) ?? []).length;
       const hasTable = xml.includes('<a:tbl>') || xml.includes('<a:tbl ');
       const hasImage = xml.includes('<p:pic>') || xml.includes('<p:pic ');
-      const hasChart = xml.includes('<c:chart') || xml.includes('chart+xml');
       const textContent = [...xml.matchAll(/<a:t>([^<]*)<\/a:t>/g)].map(m => m[1]).join('');
       const totalTextLength = textContent.replace(/\s/g, '').length;
 
-      structures.push({ index: i + 1, textBlocks, hasTable, hasImage, hasChart, totalTextLength });
+      // Resolve charts via slide relationship file
+      const charts: SlideChartInfo[] = [];
+      if (xml.includes('<c:chart')) {
+        const slideNum = i + 1;
+        const relsPath = `ppt/slides/_rels/slide${slideNum}.xml.rels`;
+        const relsFile = zip.file(relsPath);
+        if (relsFile) {
+          const relsXml = await relsFile.async('text');
+          const chartRefs = [...relsXml.matchAll(/Target="([^"]*chart[^"]*\.xml)"/gi)];
+          for (const ref of chartRefs) {
+            const target = ref[1].replace(/^\.\.\//, 'ppt/');
+            const info = await parseChartFile(zip, target);
+            if (info) charts.push(info);
+          }
+        }
+        // fallback if rels didn't resolve
+        if (charts.length === 0) charts.push({ type: 'unknown', isPivot: false });
+      }
+
+      structures.push({ index: i + 1, textBlocks, hasTable, hasImage, charts, totalTextLength });
     }
 
     return structures;

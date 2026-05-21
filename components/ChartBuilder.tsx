@@ -6,7 +6,7 @@ import {
   PointElement, ArcElement, Title, Tooltip, Legend,
 } from 'chart.js';
 import { Bar, Line, Pie, Doughnut } from 'react-chartjs-2';
-import { BrandStyle } from '@/types';
+import { BrandStyle, ChartData } from '@/types';
 
 ChartJS.register(
   CategoryScale, LinearScale, BarElement, LineElement,
@@ -30,7 +30,7 @@ interface Recommendation {
 
 interface Props {
   brand: BrandStyle;
-  onInsert: (imageDataUrl: string, title: string) => void;
+  onInsert: (imageDataUrl: string, title: string, chartData: ChartData) => void;
   onClose: () => void;
 }
 
@@ -150,9 +150,21 @@ export default function ChartBuilder({ brand, onInsert, onClose }: Props) {
 
   function handleInsert() {
     const canvas = chartContainerRef.current?.querySelector('canvas');
-    if (!canvas) return;
+    if (!canvas || !current) return;
     const dataUrl = canvas.toDataURL('image/png', 1.0);
-    onInsert(dataUrl, chartTitle);
+    const chartData: ChartData = {
+      type: chartType,
+      title: chartTitle,
+      labels: current.rows.map(r => String(r[labelCol] ?? '')),
+      datasets: dataCols.map(col => ({
+        name: current.headers[col] ?? `데이터 ${col + 1}`,
+        values: current.rows.map(r => {
+          const v = r[col];
+          return typeof v === 'number' ? v : parseFloat(String(v).replace(/,/g, '')) || 0;
+        }),
+      })),
+    };
+    onInsert(dataUrl, chartTitle, chartData);
   }
 
   const data = buildChartData();

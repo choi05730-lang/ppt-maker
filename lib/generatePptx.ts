@@ -1,8 +1,6 @@
 import pptxgen from 'pptxgenjs';
 import { BrandStyle, SlideContent } from '@/types';
 
-const IN = (v: number) => v; // already in inches
-
 export async function generatePptx(slides: SlideContent[], brand: BrandStyle): Promise<Blob> {
   const prs = new pptxgen();
   prs.defineLayout({ name: 'CUSTOM', width: brand.slideWidth, height: brand.slideHeight });
@@ -40,6 +38,9 @@ export async function generatePptx(slides: SlideContent[], brand: BrandStyle): P
         break;
       case 'table':
         renderTable(s, slide, brand);
+        break;
+      case 'chart':
+        renderChart(s, slide, brand, prs);
         break;
     }
   }
@@ -189,5 +190,61 @@ function renderTable(s: pptxgen.Slide, slide: SlideContent, brand: BrandStyle) {
     w: brand.slideWidth - 1,
     h: brand.slideHeight - 2.2,
     border: { type: 'solid', color: 'CCCCCC', pt: 1 },
+  });
+}
+
+function renderChart(s: pptxgen.Slide, slide: SlideContent, brand: BrandStyle, prs: pptxgen) {
+  s.addText(slide.title, {
+    x: 0.5, y: 0.3, w: brand.slideWidth - 1, h: 0.9,
+    ...titleOpts(brand),
+  });
+  s.addShape('line' as pptxgen.ShapeType, {
+    x: 0.5, y: 1.25, w: brand.slideWidth - 1, h: 0,
+    line: { color: brand.accentColor.replace('#', ''), width: 2 },
+  });
+
+  if (!slide.chartData || slide.chartData.datasets.length === 0) return;
+
+  const { type, title, labels, datasets } = slide.chartData;
+  const CHART_COLORS = [
+    brand.primaryColor, brand.accentColor,
+    '#E8A838', '#5BA85F', '#C0504D', '#9B59B6',
+    '#1ABC9C', '#E74C3C', '#3498DB', '#F39C12',
+  ].map(c => c.replace('#', ''));
+
+  const pptxType = ({
+    bar: prs.ChartType.bar,
+    line: prs.ChartType.line,
+    pie: prs.ChartType.pie,
+    doughnut: prs.ChartType.doughnut,
+  } as Record<string, pptxgen.CHART_NAME>)[type] ?? prs.ChartType.bar;
+
+  const chartData = datasets.map(d => ({
+    name: d.name,
+    labels,
+    values: d.values,
+  }));
+
+  s.addChart(pptxType, chartData, {
+    x: 0.5, y: 1.5,
+    w: brand.slideWidth - 1,
+    h: brand.slideHeight - 2.2,
+    chartColors: type === 'bar' || type === 'line'
+      ? datasets.map((_, i) => CHART_COLORS[i % CHART_COLORS.length])
+      : CHART_COLORS.slice(0, labels.length),
+    showTitle: !!title,
+    title: title ?? '',
+    titleFontFace: brand.titleFont,
+    titleFontSize: brand.bodySize,
+    titleColor: brand.primaryColor.replace('#', ''),
+    showLegend: datasets.length > 1 || type === 'pie' || type === 'doughnut',
+    legendFontFace: brand.bodyFont,
+    legendFontSize: brand.bodySize - 2,
+    dataLabelFontFace: brand.bodyFont,
+    dataLabelFontSize: brand.bodySize - 4,
+    valAxisLabelFontFace: brand.bodyFont,
+    valAxisLabelFontSize: brand.bodySize - 4,
+    catAxisLabelFontFace: brand.bodyFont,
+    catAxisLabelFontSize: brand.bodySize - 4,
   });
 }
